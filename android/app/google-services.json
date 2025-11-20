@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "854045667991",
+    "project_id": "cervezapp-258b2",
+    "storage_bucket": "cervezapp-258b2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:854045667991:android:7421d33caf1e5935ccafd2",
+        "android_client_info": {
+          "package_name": "com.example.cervezapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBPTMintUWmbISyD8OFdAf6-_BMGXL91Y0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

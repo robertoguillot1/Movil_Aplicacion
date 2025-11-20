@@ -1,0 +1,41 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "cervezapp-258b2",
+          "appId": "1:854045667991:android:7421d33caf1e5935ccafd2",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "cervezapp-258b2",
+          "configurations": {
+            "android": "1:854045667991:android:7421d33caf1e5935ccafd2",
+            "ios": "1:854045667991:ios:b02854864265aba1ccafd2",
+            "web": "1:854045667991:web:b5e34578a5d64fbeccafd2",
+            "windows": "1:854045667991:web:55dddc945ecb1d46ccafd2"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}

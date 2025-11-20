@@ -1,0 +1,114 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Función auxiliar para obtener datos del usuario actual
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    // Función auxiliar para verificar si el usuario es desarrollador
+    function isDeveloper() {
+      return request.auth != null && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             getUserData().role == 'developer';
+    }
+    
+    // Función auxiliar para verificar si el usuario es admin
+    function isAdmin() {
+      return request.auth != null && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             getUserData().role == 'admin';
+    }
+    
+    // Función para verificar si el usuario tiene suscripción activa
+    function hasActiveSubscription() {
+      let userData = getUserData();
+      let subscriptionActive = userData.subscriptionActive == true;
+      let subscriptionExpiry = userData.subscriptionExpiryDate;
+      let now = request.time;
+      
+      // Verificar si la suscripción está activa y no ha expirado
+      return subscriptionActive && 
+             (subscriptionExpiry == null || subscriptionExpiry > now);
+    }
+    
+    // Función para verificar si el usuario está en período de prueba
+    function isInTrial() {
+      let userData = getUserData();
+      let trialDays = userData.trialDays;
+      let trialExpiry = userData.trialExpiryDate;
+      let now = request.time;
+      
+      // Verificar si tiene días de prueba y no ha expirado
+      return (trialDays != null && trialDays > 0) && 
+             (trialExpiry == null || trialExpiry > now);
+    }
+    
+    // Función para verificar si el usuario tiene acceso (suscripción activa o en prueba)
+    function hasAccess() {
+      return request.auth != null && 
+             (hasActiveSubscription() || isInTrial() || isAdmin() || isDeveloper());
+    }
+    
+    // Reglas para usuarios
+    match /users/{userId} {
+      // Cualquier usuario autenticado puede leer su propio perfil
+      allow read: if request.auth != null && request.auth.uid == userId;
+      
+      // Solo developers pueden leer todos los usuarios
+      allow list: if request.auth != null && isDeveloper();
+      
+      // Los usuarios pueden crear su propio perfil al registrarse (solo como worker)
+      // Developers y admins pueden crear usuarios con cualquier rol
+      allow create: if request.auth != null && 
+                    (
+                      // Usuario creando su propio perfil
+                      (request.auth.uid == userId && 
+                       request.resource.data.role == 'worker') ||
+                      // Developer o admin creando cualquier usuario
+                      (isDeveloper() || isAdmin())
+                    );
+      
+      // Actualización: Developers pueden actualizar cualquier campo de cualquier usuario
+      // Los usuarios pueden actualizar su propio perfil (excepto role y campos de suscripción)
+      allow update: if request.auth != null && (
+                      // Verificar si es developer de forma explícita
+                      (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'developer') ||
+                      // Usuarios normales solo pueden actualizar su propio perfil (excepto campos restringidos)
+                      (request.auth.uid == userId && 
+                       !('role' in request.resource.data.diff(resource.data).changedKeys()) &&
+                       !('subscriptionActive' in request.resource.data.diff(resource.data).changedKeys()) &&
+                       !('subscriptionExpiryDate' in request.resource.data.diff(resource.data).changedKeys()) &&
+                       !('trialDays' in request.resource.data.diff(resource.data).changedKeys()) &&
+                       !('trialExpiryDate' in request.resource.data.diff(resource.data).changedKeys()))
+                    );
+      
+      // Solo developers pueden eliminar usuarios
+      allow delete: if request.auth != null && isDeveloper();
+    }
+    
+    // Reglas para productos - acceso solo si tiene suscripción activa, en prueba, o es admin/developer
+    match /products/{productId} {
+      allow read: if hasAccess();
+      // Solo admins y developers pueden crear/actualizar/eliminar productos
+      allow write: if request.auth != null && (isAdmin() || isDeveloper());
+    }
+    
+    // Reglas para clientes - acceso solo si tiene suscripción activa, en prueba, o es admin/developer
+    match /customers/{customerId} {
+      allow read: if hasAccess();
+      // Solo admins y developers pueden crear/actualizar/eliminar clientes
+      allow write: if request.auth != null && (isAdmin() || isDeveloper());
+    }
+    
+    // Reglas para ventas - acceso solo si tiene suscripción activa, en prueba, o es admin/developer
+    match /sales/{saleId} {
+      allow read: if hasAccess();
+      // Solo admins y developers pueden crear/actualizar/eliminar ventas
+      allow write: if request.auth != null && (isAdmin() || isDeveloper());
+    }
+  }
+}
